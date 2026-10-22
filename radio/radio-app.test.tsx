@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RadioApp, type AudioEngine, type ResolvedStream } from "@/radio";
@@ -28,6 +28,7 @@ const search = (value: string) =>
   });
 const station = (name: string) =>
   within(screen.getByRole("group", { name: "방송국" })).getByRole("button", { name });
+const bar = () => screen.getByRole("status", { name: "재생 상태" });
 const channel = (name: string) =>
   within(screen.getByRole("group", { name: /채널$/ })).getByRole("button", { name });
 
@@ -37,7 +38,7 @@ describe("방송국 검색과 선택", () => {
 
     expect(within(screen.getByRole("group", { name: "방송국" })).getAllByRole("button")).toHaveLength(18);
     expect(screen.getByText("재생 중인 채널이 없습니다")).toBeInTheDocument();
-    expect(screen.queryByText(/재생 중$/)).not.toBeInTheDocument();
+    expect(bar()).not.toHaveTextContent(/재생 중$/);
     expect(screen.queryByRole("button", { name: "정지" })).not.toBeInTheDocument();
   });
 
@@ -69,7 +70,7 @@ describe("채널 재생과 정지", () => {
 
     fireEvent.click(channel("러브FM"));
 
-    expect(await screen.findByText("SBS 러브FM 재생 중")).toBeInTheDocument();
+    await waitFor(() => expect(bar()).toHaveTextContent("SBS 러브FM 재생 중"));
     expect(engine.play).toHaveBeenCalledWith({ url: "https://stream.test/S08", protocol: "hls" }, expect.any(Function));
     expect(channel("러브FM")).toHaveAttribute("aria-pressed", "true");
     expect(channel("파워FM")).toHaveAttribute("aria-pressed", "false");
@@ -79,12 +80,12 @@ describe("채널 재생과 정지", () => {
     const { engine } = setup();
     fireEvent.click(station("SBS"));
     fireEvent.click(channel("러브FM"));
-    await screen.findByText("SBS 러브FM 재생 중");
+    await waitFor(() => expect(bar()).toHaveTextContent("SBS 러브FM 재생 중"));
 
     fireEvent.click(channel("러브FM"));
 
     expect(engine.stop).toHaveBeenCalled();
-    expect(screen.queryByText("SBS 러브FM 재생 중")).not.toBeInTheDocument();
+    expect(bar()).not.toHaveTextContent("SBS 러브FM 재생 중");
     expect(channel("러브FM")).toHaveAttribute("aria-pressed", "false");
   });
 
@@ -92,31 +93,65 @@ describe("채널 재생과 정지", () => {
     const { events } = setup();
     fireEvent.click(station("SBS"));
     fireEvent.click(channel("러브FM"));
-    await screen.findByText("SBS 러브FM 재생 중");
+    await waitFor(() => expect(bar()).toHaveTextContent("SBS 러브FM 재생 중"));
 
     fireEvent.click(channel("파워FM"));
 
-    expect(await screen.findByText("SBS 파워FM 재생 중")).toBeInTheDocument();
+    await waitFor(() => expect(bar()).toHaveTextContent("SBS 파워FM 재생 중"));
     expect(events).toEqual(["play https://stream.test/S08", "stop", "play https://stream.test/S07"]);
-    expect(screen.queryByText("SBS 러브FM 재생 중")).not.toBeInTheDocument();
+    expect(bar()).not.toHaveTextContent("SBS 러브FM 재생 중");
   });
 
   it("재생 중에 다른 방송국을 고르거나 검색어를 바꿔도 재생이 이어지고 정지할 수 있다", async () => {
     const { engine } = setup();
     fireEvent.click(station("SBS"));
     fireEvent.click(channel("러브FM"));
-    await screen.findByText("SBS 러브FM 재생 중");
+    await waitFor(() => expect(bar()).toHaveTextContent("SBS 러브FM 재생 중"));
 
     search("kbs");
     fireEvent.click(station("KBS"));
 
-    expect(screen.getByText("SBS 러브FM 재생 중")).toBeInTheDocument();
+    expect(bar()).toHaveTextContent("SBS 러브FM 재생 중");
     expect(engine.stop).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "정지" }));
 
     expect(engine.stop).toHaveBeenCalled();
-    expect(screen.queryByText("SBS 러브FM 재생 중")).not.toBeInTheDocument();
+    expect(bar()).not.toHaveTextContent("SBS 러브FM 재생 중");
+  });
+});
+
+describe("재생 상태 표시줄의 글자", () => {
+  it("재생 중에는 화면에 채널 이름만 보이고 상태 글자는 스크린 리더에만 전달된다", async () => {
+    setup();
+    fireEvent.click(station("SBS"));
+    fireEvent.click(channel("러브FM"));
+
+    await waitFor(() => expect(bar()).toHaveTextContent("SBS 러브FM 재생 중"));
+
+    expect(within(bar()).getByText("SBS 러브FM")).toBeInTheDocument();
+    expect(within(bar()).getByText("재생 중")).toHaveClass("sr-only");
+  });
+
+  it("연결 중에도 상태 글자는 화면에 보이지 않는다", () => {
+    setup();
+    fireEvent.click(station("SBS"));
+    fireEvent.click(channel("러브FM"));
+
+    expect(within(bar()).getByText("SBS 러브FM")).toBeInTheDocument();
+    expect(within(bar()).getByText("연결 중")).toHaveClass("sr-only");
+  });
+
+  it("정지하면 채널 이름만 남고 정지됨 글자는 화면에 보이지 않는다", async () => {
+    setup();
+    fireEvent.click(station("SBS"));
+    fireEvent.click(channel("러브FM"));
+    await waitFor(() => expect(bar()).toHaveTextContent("SBS 러브FM 재생 중"));
+
+    fireEvent.click(screen.getByRole("button", { name: "정지" }));
+
+    expect(within(bar()).getByText("SBS 러브FM")).toBeInTheDocument();
+    expect(within(bar()).getByText("정지됨")).toHaveClass("sr-only");
   });
 });
 
@@ -166,10 +201,10 @@ describe("재생 실패", () => {
     fireEvent.click(channel("러브FM"));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("SBS 러브FM");
-    expect(screen.queryByText("SBS 러브FM 재생 중")).not.toBeInTheDocument();
+    expect(bar()).not.toHaveTextContent("SBS 러브FM 재생 중");
 
     fireEvent.click(channel("파워FM"));
-    expect(await screen.findByText("SBS 파워FM 재생 중")).toBeInTheDocument();
+    await waitFor(() => expect(bar()).toHaveTextContent("SBS 파워FM 재생 중"));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
@@ -219,7 +254,7 @@ describe("취침 타이머", () => {
 
     await elapse(1_000);
     expect(engine.stop).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText("SBS 러브FM 재생 중")).not.toBeInTheDocument();
+    expect(bar()).not.toHaveTextContent("SBS 러브FM 재생 중");
     expect(screen.getByText("취침 타이머로 종료되었습니다")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "취침 타이머" })).not.toBeInTheDocument();
   });
@@ -250,13 +285,13 @@ describe("취침 타이머", () => {
 
     fireEvent.click(channel("파워FM"));
     await elapse(0);
-    expect(screen.getByText("SBS 파워FM 재생 중")).toBeInTheDocument();
+    expect(bar()).toHaveTextContent("SBS 파워FM 재생 중");
     expect(screen.getByText("남은 시간 5:00")).toBeInTheDocument();
     vi.mocked(engine.stop).mockClear();
 
     await elapse(minutes(5));
     expect(engine.stop).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText("SBS 파워FM 재생 중")).not.toBeInTheDocument();
+    expect(bar()).not.toHaveTextContent("SBS 파워FM 재생 중");
   });
 
   it("다른 시간을 고르면 이전 타이머를 대체한다", async () => {
@@ -281,7 +316,7 @@ describe("취침 타이머", () => {
     await elapse(minutes(20));
 
     expect(engine.stop).not.toHaveBeenCalled();
-    expect(screen.getByText("SBS 러브FM 재생 중")).toBeInTheDocument();
+    expect(bar()).toHaveTextContent("SBS 러브FM 재생 중");
     expect(screen.queryByText(/남은 시간/)).not.toBeInTheDocument();
   });
 
@@ -297,7 +332,7 @@ describe("취침 타이머", () => {
     await elapse(0);
     await elapse(minutes(30));
 
-    expect(screen.getByText("SBS 러브FM 재생 중")).toBeInTheDocument();
+    expect(bar()).toHaveTextContent("SBS 러브FM 재생 중");
     expect(screen.queryByText("취침 타이머로 종료되었습니다")).not.toBeInTheDocument();
   });
 });
@@ -306,7 +341,7 @@ describe("정지 상태와 재생 버튼", () => {
   const startPlaying = async () => {
     fireEvent.click(station("SBS"));
     fireEvent.click(channel("러브FM"));
-    await screen.findByText("SBS 러브FM 재생 중");
+    await waitFor(() => expect(bar()).toHaveTextContent("SBS 러브FM 재생 중"));
   };
 
   it("정지하면 채널 이름은 정지됨으로 남고 정지 버튼이 재생 버튼으로 바뀐다", async () => {
@@ -316,7 +351,7 @@ describe("정지 상태와 재생 버튼", () => {
     fireEvent.click(screen.getByRole("button", { name: "정지" }));
 
     expect(engine.stop).toHaveBeenCalled();
-    expect(screen.getByText("SBS 러브FM 정지됨")).toBeInTheDocument();
+    expect(bar()).toHaveTextContent("SBS 러브FM 정지됨");
     expect(screen.queryByRole("button", { name: "정지" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "재생" })).toBeInTheDocument();
   });
@@ -327,7 +362,7 @@ describe("정지 상태와 재생 버튼", () => {
 
     fireEvent.click(channel("러브FM"));
 
-    expect(screen.getByText("SBS 러브FM 정지됨")).toBeInTheDocument();
+    expect(bar()).toHaveTextContent("SBS 러브FM 정지됨");
     expect(screen.getByRole("button", { name: "재생" })).toBeInTheDocument();
   });
 
@@ -338,7 +373,7 @@ describe("정지 상태와 재생 버튼", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "재생" }));
 
-    expect(await screen.findByText("SBS 러브FM 재생 중")).toBeInTheDocument();
+    await waitFor(() => expect(bar()).toHaveTextContent("SBS 러브FM 재생 중"));
     expect(events).toEqual(["play https://stream.test/S08", "stop", "play https://stream.test/S08"]);
     expect(screen.getByRole("button", { name: "정지" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "재생" })).not.toBeInTheDocument();
@@ -351,7 +386,7 @@ describe("정지 상태와 재생 버튼", () => {
 
     fireEvent.click(channel("파워FM"));
 
-    expect(await screen.findByText("SBS 파워FM 재생 중")).toBeInTheDocument();
+    await waitFor(() => expect(bar()).toHaveTextContent("SBS 파워FM 재생 중"));
   });
 
   it("정지 상태에서는 취침 타이머를 걸 수 없다", async () => {
@@ -384,12 +419,12 @@ describe("취침 타이머 종료 뒤", () => {
 
     await elapse(10 * 60_000);
     expect(screen.getByText("취침 타이머로 종료되었습니다")).toBeInTheDocument();
-    expect(screen.getByText("SBS 러브FM 정지됨")).toBeInTheDocument();
+    expect(bar()).toHaveTextContent("SBS 러브FM 정지됨");
 
     fireEvent.click(screen.getByRole("button", { name: "재생" }));
     await elapse(0);
 
-    expect(screen.getByText("SBS 러브FM 재생 중")).toBeInTheDocument();
+    expect(bar()).toHaveTextContent("SBS 러브FM 재생 중");
     expect(screen.queryByText("취침 타이머로 종료되었습니다")).not.toBeInTheDocument();
   });
 });

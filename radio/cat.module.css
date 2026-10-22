@@ -5,8 +5,9 @@
   --wood: oklch(0.58 0.08 55);
 
   position: relative;
-  flex: 1 1 6rem;
-  min-width: 0;
+  /* 이름과 버튼을 남기고 남는 공간만 쓴다. 좁은 화면에서도 버튼이 다음 줄로 밀리지 않게 한다. */
+  flex: 1 1 0;
+  min-width: 3rem;
   height: 3rem;
   overflow: hidden;
 }

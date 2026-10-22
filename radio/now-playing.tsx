@@ -23,17 +23,17 @@ type Props = {
   onPlay: () => void;
 };
 
-function statusLabel(player: PlayerState): string {
-  switch (player.status) {
-    case "connecting":
-      return `${displayName(player.target)} 연결 중`;
-    case "playing":
-      return `${displayName(player.target)} 재생 중`;
-    case "stopped":
-      return `${displayName(player.target)} 정지됨`;
-    default:
-      return "재생 중인 채널이 없습니다";
-  }
+/** 화면에는 채널 이름만 보여주고, 재생 상태는 스크린 리더에만 읽어 준다. */
+function StatusText({ player }: { player: PlayerState }) {
+  if (player.status === "idle" || player.status === "error") return <>재생 중인 채널이 없습니다</>;
+
+  const state = { connecting: "연결 중", playing: "재생 중", stopped: "정지됨" }[player.status];
+  return (
+    <>
+      {displayName(player.target)}
+      <span className="sr-only"> {state}</span>
+    </>
+  );
 }
 
 export function NowPlaying({ player, onStop, onPlay }: Props) {
@@ -41,8 +41,10 @@ export function NowPlaying({ player, onStop, onPlay }: Props) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div role="status" className="flex min-h-[5.125rem] flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border p-4">
-        <p className="font-medium">{statusLabel(player)}</p>
+      <div role="status" aria-label="재생 상태" className="flex min-h-[5.125rem] items-center gap-3 rounded-lg border p-4">
+        <p className="min-w-0 font-medium">
+          <StatusText player={player} />
+        </p>
         {/* 재생 중인 채널이 없을 때(처음, 재생 실패)는 아무 캐릭터도 보이지 않는다. */}
         {isActive && <Cat state="dancing" />}
         {player.status === "stopped" && <Cat state="resting" />}
