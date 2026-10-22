@@ -1,9 +1,12 @@
+import { DevicePreview } from "@/components/device-preview";
 import { RadioApp } from "@/radio";
 
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-10 sm:px-6 sm:py-16">
-      <RadioApp />
+    <main className="flex flex-1 flex-col">
+      <DevicePreview>
+        <RadioApp />
+      </DevicePreview>
     </main>
   );
 }

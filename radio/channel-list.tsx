@@ -20,7 +20,7 @@ export function ChannelList({ station, player, onToggle }: Props) {
     <div
       role="group"
       aria-label={`${station.name} 채널`}
-      className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
+      className="grid grid-cols-1 gap-2 @min-[30rem]:grid-cols-2 @min-[40rem]:grid-cols-3"
     >
       {station.channels.map((channel) => {
         const isTarget = player.target?.channel.id === channel.id;
