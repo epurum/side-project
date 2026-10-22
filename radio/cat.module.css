@@ -1,0 +1,176 @@
+.stage {
+  --fur: oklch(0.78 0.14 65);
+  --fur-light: oklch(0.93 0.05 80);
+  --pink: oklch(0.8 0.1 10);
+  --wood: oklch(0.58 0.08 55);
+
+  position: relative;
+  flex: 1 1 6rem;
+  min-width: 0;
+  height: 3rem;
+  overflow: hidden;
+}
+
+.walker {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 3rem;
+  height: 3rem;
+  animation: roam 7s linear infinite;
+}
+
+/* 쉬는 모습은 오른쪽의 재생 버튼 쪽으로 붙이되, 너무 붙지 않게 간격을 둔다. */
+.sitter {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 0;
+  width: 3rem;
+  height: 3rem;
+}
+
+.fur {
+  fill: var(--fur);
+  stroke: var(--foreground);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+}
+
+.furLight {
+  fill: var(--fur-light);
+}
+
+.pink {
+  fill: var(--pink);
+}
+
+.wood {
+  fill: var(--wood);
+  stroke: var(--foreground);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+.line {
+  fill: none;
+  stroke: var(--foreground);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.limb {
+  fill: none;
+  stroke: var(--fur);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.character {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform-origin: 50% 100%;
+  /* 투명 배경이 없는 이미지라, 밝은 화면에서는 흰 배경이 보이지 않게 섞는다. */
+  mix-blend-mode: multiply;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* 쉬는 이미지는 가만히 숨 쉬듯 아주 조금 커졌다 작아진다. */
+.restingImage {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+:global(.dark) .character {
+  mix-blend-mode: normal;
+  border-radius: 0.75rem;
+}
+
+.glyph {
+  fill: var(--foreground);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.breathe {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: breathe 3s ease-in-out infinite;
+}
+
+.note {
+  animation: float 1.8s ease-out infinite;
+  opacity: 0;
+}
+
+.noteLate {
+  animation-delay: 0.9s;
+}
+
+.zzz {
+  animation: drift 2.6s ease-in-out infinite;
+}
+
+.zzzLate {
+  animation-delay: 1.3s;
+}
+
+@keyframes roam {
+  0% {
+    left: 0;
+    transform: scaleX(1);
+  }
+  49% {
+    left: calc(100% - 3rem);
+    transform: scaleX(1);
+  }
+  50% {
+    left: calc(100% - 3rem);
+    transform: scaleX(-1);
+  }
+  99% {
+    left: 0;
+    transform: scaleX(-1);
+  }
+  100% {
+    left: 0;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes float {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.04);
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(2px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}

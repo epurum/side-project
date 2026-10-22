@@ -11,12 +11,15 @@ export type PlaybackTarget = { stationName: string; channel: Channel };
 
 export type PlayerState =
   | { status: "idle"; target: null; message?: undefined }
-  | { status: "connecting" | "playing"; target: PlaybackTarget; message?: undefined }
+  | { status: "connecting" | "playing" | "stopped"; target: PlaybackTarget; message?: undefined }
   | { status: "error"; target: PlaybackTarget; message: string };
 
 const IDLE: PlayerState = { status: "idle", target: null };
 
-/** 한 번에 하나의 채널만 재생한다. 새 요청이 들어오면 앞선 요청의 결과는 버린다. */
+/**
+ * 한 번에 하나의 채널만 재생한다. 새 요청이 들어오면 앞선 요청의 결과는 버린다.
+ * 정지해도 마지막 채널(target)은 남겨, 같은 채널을 바로 다시 재생할 수 있게 한다.
+ */
 export function useRadioPlayer(
   engine: AudioEngine,
   resolve: (source: StreamSource) => Promise<ResolvedStream>
@@ -29,7 +32,9 @@ export function useRadioPlayer(
     requestId.current++;
     if (engineActive.current) engine.stop();
     engineActive.current = false;
-    setState(IDLE);
+    setState((previous) =>
+      previous.target ? { status: "stopped", target: previous.target } : IDLE
+    );
   }, [engine]);
 
   const play = useCallback(

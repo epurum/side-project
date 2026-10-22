@@ -36,7 +36,9 @@ describe("방송국 검색과 선택", () => {
     setup();
 
     expect(within(screen.getByRole("group", { name: "방송국" })).getAllByRole("button")).toHaveLength(18);
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByText("재생 중인 채널이 없습니다")).toBeInTheDocument();
+    expect(screen.queryByText(/재생 중$/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "정지" })).not.toBeInTheDocument();
   });
 
   it("sbs를 검색해 선택하면 러브FM과 파워FM이 나오고, 선택만으로는 재생되지 않는다", () => {
@@ -115,6 +117,44 @@ describe("채널 재생과 정지", () => {
 
     expect(engine.stop).toHaveBeenCalled();
     expect(screen.queryByText("SBS 러브FM 재생 중")).not.toBeInTheDocument();
+  });
+});
+
+describe("재생 상태 표시줄의 캐릭터", () => {
+  const resting = () => screen.queryByRole("img", { name: "쉬는 캐릭터" });
+  const dancing = () => screen.queryByRole("img", { name: "춤추는 캐릭터" });
+
+  it("재생 중인 채널이 없는 처음 상태에서는 아무 캐릭터도 보이지 않는다", () => {
+    setup();
+
+    expect(resting()).not.toBeInTheDocument();
+    expect(dancing()).not.toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  it("채널을 누르면 춤추기 시작하고, 정지하면 다시 의자에 앉아 쉰다", async () => {
+    setup();
+    fireEvent.click(station("SBS"));
+
+    fireEvent.click(channel("러브FM"));
+    expect(await screen.findByRole("img", { name: "춤추는 캐릭터" })).toBeInTheDocument();
+    expect(resting()).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "정지" }));
+    expect(resting()).toBeInTheDocument();
+    expect(dancing()).not.toBeInTheDocument();
+  });
+
+  it("연결 중에도 춤추고, 재생에 실패해 채널이 없어지면 캐릭터도 사라진다", async () => {
+    setup({ failResolveFor: "S08" });
+    fireEvent.click(station("SBS"));
+
+    fireEvent.click(channel("러브FM"));
+    expect(dancing()).toBeInTheDocument();
+
+    await screen.findByRole("alert");
+    expect(resting()).not.toBeInTheDocument();
+    expect(dancing()).not.toBeInTheDocument();
   });
 });
 
@@ -259,5 +299,163 @@ describe("취침 타이머", () => {
 
     expect(screen.getByText("SBS 러브FM 재생 중")).toBeInTheDocument();
     expect(screen.queryByText("취침 타이머로 종료되었습니다")).not.toBeInTheDocument();
+  });
+});
+
+describe("정지 상태와 재생 버튼", () => {
+  const startPlaying = async () => {
+    fireEvent.click(station("SBS"));
+    fireEvent.click(channel("러브FM"));
+    await screen.findByText("SBS 러브FM 재생 중");
+  };
+
+  it("정지하면 채널 이름은 정지됨으로 남고 정지 버튼이 재생 버튼으로 바뀐다", async () => {
+    const { engine } = setup();
+    await startPlaying();
+
+    fireEvent.click(screen.getByRole("button", { name: "정지" }));
+
+    expect(engine.stop).toHaveBeenCalled();
+    expect(screen.getByText("SBS 러브FM 정지됨")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "정지" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "재생" })).toBeInTheDocument();
+  });
+
+  it("채널 목록에서 다시 눌러 멈춘 경우에도 같은 정지 상태가 된다", async () => {
+    setup();
+    await startPlaying();
+
+    fireEvent.click(channel("러브FM"));
+
+    expect(screen.getByText("SBS 러브FM 정지됨")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "재생" })).toBeInTheDocument();
+  });
+
+  it("재생 버튼을 누르면 같은 채널을 다시 재생하고 재생 버튼은 정지 버튼으로 돌아온다", async () => {
+    const { events } = setup();
+    await startPlaying();
+    fireEvent.click(screen.getByRole("button", { name: "정지" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "재생" }));
+
+    expect(await screen.findByText("SBS 러브FM 재생 중")).toBeInTheDocument();
+    expect(events).toEqual(["play https://stream.test/S08", "stop", "play https://stream.test/S08"]);
+    expect(screen.getByRole("button", { name: "정지" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "재생" })).not.toBeInTheDocument();
+  });
+
+  it("정지된 채널이 있어도 목록에서 다른 채널을 눌러 바로 재생할 수 있다", async () => {
+    setup();
+    await startPlaying();
+    fireEvent.click(screen.getByRole("button", { name: "정지" }));
+
+    fireEvent.click(channel("파워FM"));
+
+    expect(await screen.findByText("SBS 파워FM 재생 중")).toBeInTheDocument();
+  });
+
+  it("정지 상태에서는 취침 타이머를 걸 수 없다", async () => {
+    setup();
+    await startPlaying();
+
+    fireEvent.click(screen.getByRole("button", { name: "정지" }));
+
+    expect(screen.queryByRole("group", { name: "취침 타이머" })).not.toBeInTheDocument();
+  });
+});
+
+describe("취침 타이머 종료 뒤", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const elapse = (ms: number) =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+
+  it("채널은 정지됨으로 남고, 재생 버튼으로 다시 들을 수 있다", async () => {
+    setup();
+    fireEvent.click(station("SBS"));
+    fireEvent.click(channel("러브FM"));
+    await elapse(0);
+    fireEvent.click(
+      within(screen.getByRole("group", { name: "취침 타이머" })).getByRole("button", { name: "10분" })
+    );
+
+    await elapse(10 * 60_000);
+    expect(screen.getByText("취침 타이머로 종료되었습니다")).toBeInTheDocument();
+    expect(screen.getByText("SBS 러브FM 정지됨")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "재생" }));
+    await elapse(0);
+
+    expect(screen.getByText("SBS 러브FM 재생 중")).toBeInTheDocument();
+    expect(screen.queryByText("취침 타이머로 종료되었습니다")).not.toBeInTheDocument();
+  });
+});
+
+describe("춤추는 캐릭터의 동작 그림", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  const elapse = (ms: number) =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+
+  it("여러 장의 서로 다른 그림을 돌려가며 보여준다", async () => {
+    setup();
+    fireEvent.click(station("SBS"));
+    fireEvent.click(channel("러브FM"));
+    await elapse(0);
+
+    const frames = new Set<string>();
+    for (let step = 0; step < 12; step++) {
+      frames.add(screen.getByRole("img", { name: "춤추는 캐릭터" }).innerHTML);
+      await elapse(150);
+    }
+
+    expect(frames.size).toBeGreaterThanOrEqual(4);
+  });
+
+  it("제공된 이미지를 불러오지 못하면 춤추는 고양이가 대신 춤춘다", async () => {
+    setup();
+    fireEvent.click(station("SBS"));
+    fireEvent.click(channel("러브FM"));
+    await elapse(0);
+
+    const character = screen.getByRole("img", { name: "춤추는 캐릭터" });
+    fireEvent.error(character.querySelector("img") as HTMLImageElement);
+
+    expect(screen.queryByRole("img", { name: "춤추는 캐릭터" })).not.toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "춤추는 고양이" })).toBeInTheDocument();
+  });
+
+  const playThenStop = async () => {
+    fireEvent.click(station("SBS"));
+    fireEvent.click(channel("러브FM"));
+    await elapse(0);
+    fireEvent.click(screen.getByRole("button", { name: "정지" }));
+  };
+
+  it("쉬는 이미지를 불러오지 못하면 의자에 앉아 쉬는 고양이가 대신 쉰다", async () => {
+    setup();
+    await playThenStop();
+
+    const character = screen.getByRole("img", { name: "쉬는 캐릭터" });
+    fireEvent.error(character.querySelector("img") as HTMLImageElement);
+
+    expect(screen.queryByRole("img", { name: "쉬는 캐릭터" })).not.toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "의자에서 쉬는 고양이" })).toBeInTheDocument();
+  });
+
+  it("쉬고 있을 때는 그림이 바뀌지 않는다", async () => {
+    setup();
+    await playThenStop();
+    const before = screen.getByRole("img", { name: "쉬는 캐릭터" }).innerHTML;
+
+    await elapse(2_000);
+
+    expect(screen.getByRole("img", { name: "쉬는 캐릭터" }).innerHTML).toBe(before);
   });
 });

@@ -57,7 +57,7 @@ export function RadioApp({ engine, resolve = resolveStream }: Props) {
       <NowPlaying
         player={player}
         onStop={stop}
-        onRetry={() => player.target && void play(player.target)}
+        onPlay={() => player.target && void play(player.target)}
       />
 
       {timer.expired && (
