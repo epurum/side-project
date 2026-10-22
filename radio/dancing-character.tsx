@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import styles from "./cat.module.css";
 
-/** 사용자가 제공한 캐릭터 이미지. 저작권 때문에 저장소에는 올리지 않고(.gitignore) 각자 이 위치에 둔다. */
+/** 사용자가 제공한 캐릭터 이미지(개인 페이지용). 파일이 없으면 고양이가 대신 춤춘다. */
 const CHARACTER_SRC = "/character/dancer.png";
 
 /** 한 장짜리 그림에 이동·회전·찌그러짐을 줘서 만든 춤 동작. */

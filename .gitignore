@@ -50,6 +50,3 @@ next-env.d.ts
 
 # worktree
 .claude/worktrees
-
-# user-provided character image (copyrighted, keep out of the repository)
-public/character/

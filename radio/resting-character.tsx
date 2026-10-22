@@ -4,7 +4,7 @@ import Image from "next/image";
 
 import styles from "./cat.module.css";
 
-/** 사용자가 제공한 앉은 모습의 이미지. 저작권 때문에 저장소에는 올리지 않고(.gitignore) 각자 이 위치에 둔다. */
+/** 사용자가 제공한 앉은 모습의 이미지(개인 페이지용). 파일이 없으면 의자 고양이가 대신 쉰다. */
 const RESTING_SRC = "/character/resting.jpg";
 
 type Props = {
