@@ -155,11 +155,11 @@ describe("재생 상태 표시줄의 글자", () => {
   });
 });
 
-describe("재생 상태 표시줄의 캐릭터", () => {
-  const resting = () => screen.queryByRole("img", { name: "쉬는 캐릭터" });
-  const dancing = () => screen.queryByRole("img", { name: "춤추는 캐릭터" });
+describe("재생 상태 표시줄의 고양이", () => {
+  const resting = () => screen.queryByRole("img", { name: "의자에서 쉬는 고양이" });
+  const dancing = () => screen.queryByRole("img", { name: "춤추는 고양이" });
 
-  it("재생 중인 채널이 없는 처음 상태에서는 아무 캐릭터도 보이지 않는다", () => {
+  it("재생 중인 채널이 없는 처음 상태에서는 아무 고양이도 보이지 않는다", () => {
     setup();
 
     expect(resting()).not.toBeInTheDocument();
@@ -172,7 +172,7 @@ describe("재생 상태 표시줄의 캐릭터", () => {
     fireEvent.click(station("SBS"));
 
     fireEvent.click(channel("러브FM"));
-    expect(await screen.findByRole("img", { name: "춤추는 캐릭터" })).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: "춤추는 고양이" })).toBeInTheDocument();
     expect(resting()).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "정지" }));
@@ -180,7 +180,7 @@ describe("재생 상태 표시줄의 캐릭터", () => {
     expect(dancing()).not.toBeInTheDocument();
   });
 
-  it("연결 중에도 춤추고, 재생에 실패해 채널이 없어지면 캐릭터도 사라진다", async () => {
+  it("연결 중에도 춤추고, 재생에 실패해 채널이 없어지면 고양이도 사라진다", async () => {
     setup({ failResolveFor: "S08" });
     fireEvent.click(station("SBS"));
 
@@ -429,7 +429,7 @@ describe("취침 타이머 종료 뒤", () => {
   });
 });
 
-describe("춤추는 캐릭터의 동작 그림", () => {
+describe("춤추는 고양이의 동작 그림", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
@@ -446,24 +446,11 @@ describe("춤추는 캐릭터의 동작 그림", () => {
 
     const frames = new Set<string>();
     for (let step = 0; step < 12; step++) {
-      frames.add(screen.getByRole("img", { name: "춤추는 캐릭터" }).innerHTML);
+      frames.add(screen.getByRole("img", { name: "춤추는 고양이" }).innerHTML);
       await elapse(150);
     }
 
     expect(frames.size).toBeGreaterThanOrEqual(4);
-  });
-
-  it("제공된 이미지를 불러오지 못하면 춤추는 고양이가 대신 춤춘다", async () => {
-    setup();
-    fireEvent.click(station("SBS"));
-    fireEvent.click(channel("러브FM"));
-    await elapse(0);
-
-    const character = screen.getByRole("img", { name: "춤추는 캐릭터" });
-    fireEvent.error(character.querySelector("img") as HTMLImageElement);
-
-    expect(screen.queryByRole("img", { name: "춤추는 캐릭터" })).not.toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "춤추는 고양이" })).toBeInTheDocument();
   });
 
   const playThenStop = async () => {
@@ -473,24 +460,13 @@ describe("춤추는 캐릭터의 동작 그림", () => {
     fireEvent.click(screen.getByRole("button", { name: "정지" }));
   };
 
-  it("쉬는 이미지를 불러오지 못하면 의자에 앉아 쉬는 고양이가 대신 쉰다", async () => {
-    setup();
-    await playThenStop();
-
-    const character = screen.getByRole("img", { name: "쉬는 캐릭터" });
-    fireEvent.error(character.querySelector("img") as HTMLImageElement);
-
-    expect(screen.queryByRole("img", { name: "쉬는 캐릭터" })).not.toBeInTheDocument();
-    expect(screen.getByRole("img", { name: "의자에서 쉬는 고양이" })).toBeInTheDocument();
-  });
-
   it("쉬고 있을 때는 그림이 바뀌지 않는다", async () => {
     setup();
     await playThenStop();
-    const before = screen.getByRole("img", { name: "쉬는 캐릭터" }).innerHTML;
+    const before = screen.getByRole("img", { name: "의자에서 쉬는 고양이" }).innerHTML;
 
     await elapse(2_000);
 
-    expect(screen.getByRole("img", { name: "쉬는 캐릭터" }).innerHTML).toBe(before);
+    expect(screen.getByRole("img", { name: "의자에서 쉬는 고양이" }).innerHTML).toBe(before);
   });
 });

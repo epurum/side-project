@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 
 import styles from "./cat.module.css";
-import { DancingCharacter } from "./dancing-character";
-import { RestingCharacter } from "./resting-character";
 
 function Head({ closedEyes }: { closedEyes?: boolean }) {
   return (
@@ -134,27 +132,7 @@ function RestingCat() {
   );
 }
 
-/**
- * 재생하는 동안(연결 중 포함)에는 제공된 캐릭터 이미지가 춤추며 돌아다니고, 멈춰 있으면 앉은 모습의 이미지가 쉰다.
- * 각 이미지가 없으면 춤추는 고양이, 의자에 앉아 쉬는 고양이가 대신 나온다.
- */
+/** 재생하는 동안(연결 중 포함)에는 춤추며 돌아다니고, 멈춰 있으면 의자에 앉아 쉰다. */
 export function Cat({ state }: { state: "dancing" | "resting" }) {
-  const [danceImageMissing, setDanceImageMissing] = useState(false);
-  const [restImageMissing, setRestImageMissing] = useState(false);
-
-  return (
-    <div className={styles.stage}>
-      {state === "resting" ? (
-        restImageMissing ? (
-          <RestingCat />
-        ) : (
-          <RestingCharacter onMissing={() => setRestImageMissing(true)} />
-        )
-      ) : danceImageMissing ? (
-        <DancingCat />
-      ) : (
-        <DancingCharacter onMissing={() => setDanceImageMissing(true)} />
-      )}
-    </div>
-  );
+  return <div className={styles.stage}>{state === "dancing" ? <DancingCat /> : <RestingCat />}</div>;
 }
